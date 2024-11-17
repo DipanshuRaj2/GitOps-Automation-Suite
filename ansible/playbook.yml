@@ -47,11 +47,11 @@
       register: apt_update_result
 
     # Remove conflicting containerd package
-    - name: Remove conflicting containerd package
-      apt:
-        name: containerd
-        state: absent
-      ignore_errors: yes
+    # - name: Remove conflicting containerd package
+    #   apt:
+    #     name: containerd
+    #     state: absent
+    #   ignore_errors: yes
 
     Add Docker’s official GPG key
     - name: Add Docker's official GPG key
@@ -74,7 +74,7 @@
       loop:
         - docker-ce
         - docker-ce-cli
-        # - containerd.io
+        - containerd.io
         - docker.io
         - docker-compose
         - python3-pip
