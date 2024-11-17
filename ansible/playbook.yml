@@ -47,38 +47,38 @@
       register: apt_update_result
 
     # Remove conflicting containerd package
-    # - name: Remove conflicting containerd package
-    #   apt:
-    #     name: containerd
-    #     state: absent
-    #   ignore_errors: yes
+    - name: Remove conflicting containerd package
+      apt:
+        name: containerd
+        state: absent
+      ignore_errors: yes
 
-    Add Docker’s official GPG key
+    # Add Docker’s official GPG key
     - name: Add Docker's official GPG key
-  command: >
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      shell: | 
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-- name: Set up Docker stable repository
-  copy:
-    dest: /etc/apt/sources.list.d/docker.list
-    content: |
-      deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
-    mode: '0644'
+    - name: Set up Docker stable repository
+      copy:
+        dest: /etc/apt/sources.list.d/docker.list
+        content: |
+          deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+        mode: '0644'
 
-- name: Update apt cache after adding Docker repo
-  apt:
-    update_cache: yes
+    - name: Update apt cache after adding Docker repo
+      apt:
+        update_cache: yes
 
-- name: Install Docker CE and other required packages
-  apt:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - docker-ce
-    - docker-ce-cli
-    - containerd.io
-    - docker-compose-plugin
-    - python3-pip
+    - name: Install Docker CE and other required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-compose-plugin
+        - python3-pip
 
     - name: Ensure Docker service is started and enabled
       service:
