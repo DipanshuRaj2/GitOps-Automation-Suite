@@ -55,29 +55,30 @@
 
     Add Docker’s official GPG key
     - name: Add Docker's official GPG key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+  command: >
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-    Set up Docker repository
-    - name: Set up Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-        state: present
+- name: Set up Docker stable repository
+  copy:
+    dest: /etc/apt/sources.list.d/docker.list
+    content: |
+      deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+    mode: '0644'
 
-    # Install required packages (docker.io, docker-compose, python3-pip)
-    - name: Install required packages
-      apt:
-        name: "{{ item }}"
-        state: present
-        update_cache: no
-      loop:
-        - docker-ce
-        - docker-ce-cli
-        - containerd.io
-        - docker.io
-        - docker-compose
-        - python3-pip
+- name: Update apt cache after adding Docker repo
+  apt:
+    update_cache: yes
+
+- name: Install Docker CE and other required packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-compose-plugin
+    - python3-pip
 
     - name: Ensure Docker service is started and enabled
       service:
