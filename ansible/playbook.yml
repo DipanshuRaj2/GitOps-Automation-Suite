@@ -74,7 +74,7 @@
       loop:
         - docker-ce
         - docker-ce-cli
-        - containerd.io
+        # - containerd.io
         - docker.io
         - docker-compose
         - python3-pip
