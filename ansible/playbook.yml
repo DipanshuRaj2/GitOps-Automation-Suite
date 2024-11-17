@@ -47,23 +47,23 @@
       register: apt_update_result
 
     # Remove conflicting containerd package
-    # - name: Remove conflicting containerd package
-    #   apt:
-    #     name: containerd
-    #     state: absent
-    #   ignore_errors: yes
+    - name: Remove conflicting containerd package
+      apt:
+        name: containerd
+        state: absent
+      ignore_errors: yes
 
-    # Add Docker’s official GPG key
-    # - name: Add Docker's official GPG key
-    #   apt_key:
-    #     url: https://download.docker.com/linux/ubuntu/gpg
-    #     state: present
+    Add Docker’s official GPG key
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
 
-    # Set up Docker repository
-    # - name: Set up Docker repository
-    #   apt_repository:
-    #     repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    #     state: present
+    Set up Docker repository
+    - name: Set up Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        state: present
 
     # Install required packages (docker.io, docker-compose, python3-pip)
     - name: Install required packages
