@@ -1,65 +1,52 @@
----
 - hosts: localhost
-  become: true  # Run with sudo privileges
+  become: true
   become_user: root
   tasks:
-    # Remove any apt locks using wait_for for better reliability
-    - name: Wait for apt lock release
-      wait_for:
-        path: /var/lib/apt/lists/lock
-        state: absent
-        timeout: 60
-      ignore_errors: yes
-
-    - name: Wait for dpkg lock release
-      wait_for:
-        path: /var/lib/dpkg/lock
-        state: absent
-        timeout: 60
-      ignore_errors: yes
-
-    - name: Wait for dpkg-frontend lock release
-      wait_for:
-        path: /var/lib/dpkg/lock-frontend
-        state: absent
-        timeout: 60
-      ignore_errors: yes
-
-    # Configure apt sources correctly
-    - name: Configure apt repositories
-      copy:
-        dest: /etc/apt/sources.list
-        content: |
-          deb http://us-east-1.ec2.archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse
-          deb http://us-east-1.ec2.archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse
-          deb http://us-east-1.ec2.archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse
-          deb http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
-        mode: '0644'
-
-    - name: Clean apt cache
-      command: apt-get clean
-
-    - name: Update apt packages
-      apt:
-        update_cache: yes
-        upgrade: dist
-        cache_valid_time: 3600
-      register: apt_update_result
-
-    - name: Install required packages
+    # Remove conflicting packages first
+    - name: Remove old Docker packages
       apt:
         name: "{{ item }}"
-        state: present
-        update_cache: no
+        state: absent
+        autoremove: yes
       loop:
+        - docker
+        - docker-engine
         - docker.io
-        - python3-pip
+        - containerd
+        - runc
 
-    # Install docker-compose via pip for reliability
-    - name: Install Docker Compose
-      pip:
-        name: docker-compose
+    # Add Docker's official GPG key and repository
+    - name: Install prerequisites for Docker repository
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
         state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    # Install Docker packages from official repository
+    - name: Install Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
 
     - name: Ensure Docker service is started and enabled
       service:
@@ -72,4 +59,3 @@
         name: "{{ ansible_user | default('ubuntu') }}"
         groups: docker
         append: yes
-
