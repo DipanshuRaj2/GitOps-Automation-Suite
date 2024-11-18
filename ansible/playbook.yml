@@ -3,27 +3,27 @@
   become: true  # Run with sudo privileges
   become_user: root
   tasks:
-    # Remove any apt locks
-    - name: Ensure no apt lock exists
-      file:
+    # Remove any apt locks using wait_for for better reliability
+    - name: Wait for apt lock release
+      wait_for:
         path: /var/lib/apt/lists/lock
         state: absent
+        timeout: 60
       ignore_errors: yes
 
-    - name: Ensure no apt lock exists for dpkg
-      file:
+    - name: Wait for dpkg lock release
+      wait_for:
         path: /var/lib/dpkg/lock
         state: absent
+        timeout: 60
       ignore_errors: yes
 
-    - name: Ensure no apt lock exists for dpkg-frontend
-      file:
+    - name: Wait for dpkg-frontend lock release
+      wait_for:
         path: /var/lib/dpkg/lock-frontend
         state: absent
+        timeout: 60
       ignore_errors: yes
-
-    - name: Wait for lock release
-      command: sleep 5
 
     # Configure apt sources correctly
     - name: Configure apt repositories
@@ -53,8 +53,13 @@
         update_cache: no
       loop:
         - docker.io
-        - docker-compose
         - python3-pip
+
+    # Install docker-compose via pip for reliability
+    - name: Install Docker Compose
+      pip:
+        name: docker-compose
+        state: present
 
     - name: Ensure Docker service is started and enabled
       service:
@@ -67,3 +72,4 @@
         name: "{{ ansible_user | default('ubuntu') }}"
         groups: docker
         append: yes
+
