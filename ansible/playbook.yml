@@ -52,8 +52,8 @@
         state: present
         update_cache: no
       loop:
-        - docker.io
-        - docker-compose
+        # - docker.io
+        # - docker-compose
         - python3-pip
 
     - name: Ensure Docker service is started and enabled
