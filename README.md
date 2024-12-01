@@ -14,6 +14,7 @@ GitOps-Automation-Suite is a comprehensive suite designed to automate and manage
 - **CSS**: 36.2%
 - **JavaScript**: 7.3%
 - **Dockerfile**: 0.5%
+- **Ansible**
 
 ## Getting Started
 ```
