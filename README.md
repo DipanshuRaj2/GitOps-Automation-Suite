@@ -16,7 +16,9 @@ GitOps-Automation-Suite is a comprehensive suite designed to automate and manage
 - **Dockerfile**: 0.5%
 
 ## Getting Started
-
+```
+AWS Sign-in -> On the Ansible EC2 instances -> Go to actions-runner directory -> Execute the ./ run.sh, it will on.
+```
 ### Prerequisites
 - Docker
 - Ansible
