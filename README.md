@@ -40,7 +40,8 @@ GitOps-Automation-Suite is a comprehensive suite designed to automate and manage
     ```
 2. **Run Ansible playbook**
     ```sh
-    ansible-playbook -i inventory playbook.yml
+    ansible-playbook playbook.yml
+    
     ```
 3. **Set up and trigger GitHub Actions workflow**
     - Configure your GitHub Actions workflow in `.github/workflows`.
