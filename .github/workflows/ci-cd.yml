@@ -1,118 +1,81 @@
 name: CI/CD Pipeline for Static Website
+
 on:
   push:
-    paths:
-      - 'src/**'
     branches:
       - main
+    paths:
+      - '.html'
+      - '.css'
+      - Dockerfile
+      - nginx.conf
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: self-hosted
-    
+
     steps:
-      # Initial system setup and permissions
-      - name: Initial system setup
+      - name: Clean system locks & update
         run: |
           sudo rm -f /var/lib/apt/lists/lock
-          sudo rm -f /var/lib/dpkg/lock
-          sudo rm -f /var/lib/dpkg/lock-frontend
-          sudo apt-get update
+          sudo rm -f /var/lib/dpkg/lock*
+          sudo apt-get update -y
           sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 
-      # Add Docker permissions step
-      - name: Setup Docker permissions
+      - name: Set Docker permissions
         run: |
           sudo chmod 666 /var/run/docker.sock
           sudo usermod -aG docker $USER
           sudo systemctl restart docker || true
-          
+
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up Docker Buildx for advanced Docker features
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
           install: true
-          
-      # Log in to Docker Hub
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          
-      - name: List files in the directory
-        run: ls -al
-      
-      - name: Remove existing container if exists
+
+      - name: Remove old container (if running)
         run: |
           docker rm -f my-static-website || true
-        
-      # Build and push Docker image using Buildx
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+
+      - name: Build & push Docker image
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
-          cache-to: type=inline
-          
-      # Set up SSH for Ansible deployment
-      - name: Set up SSH for Ansible
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          
-      # Install Ansible dependencies
-      - name: Install Ansible dependencies
-        run: |
-          sudo apt-add-repository --yes --update ppa:ansible/ansible
-     # sudo apt-get install -y ansible
-          
-      # Run Ansible Playbook
-      - name: Run Ansible Playbook for Deployment
-        uses: dawidd6/action-ansible-playbook@v2
-        with:
-          inventory: ansible/inventory
-          playbook: ansible/playbook.yml
-          options: |
-            --become
-            --become-method=sudo
-            --become-user=root
-            -vvvv
-          sudo: true
 
-      - name: Pull Docker image from Docker Hub
+      - name: Pull latest image
         run: |
           docker pull ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
-      
-      - name: Run Docker container
+
+      - name: Run Docker container on port 8090
         run: |
-          docker run -d -p 80:80 --name my-static-website ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
+          docker run -d --name my-static-website -p 8090:8090 ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
 
+      - name: Post-deployment verification
+        run: |
+          echo "Deployed! Checking running containers..."
+          docker ps
 
-      # Clean up after deployment
-      - name: Clean up
-        if: always()
+      - name: Clean up apt cache
         run: |
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
 
-      # Notify on failure
       - name: Notify on failure
         if: failure()
-        run: |
-          echo "Workflow failed! Check the logs for more details."
-          # Add your notification commands here (e.g., email, Slack)
+        run: echo "Deployment failed. Check logs."
 
-      # Verify deployment
-      - name: Verify deployment
+      - name: Notify on success
         if: success()
-        run: |
-          echo "Verifying deployment..."
-          docker ps
-          systemctl status docker || true
+        run: echo "✅ Static website successfully deployed on port 8090!"
