@@ -1,8 +1,7 @@
-# Use NGINX to serve the static content
 FROM nginx:alpine
 
-# Copy the website content to the NGINX container
-COPY src/ /usr/share/nginx/html/
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY . /usr/share/nginx/html
 
-# Expose the default NGINX port
-EXPOSE 80
+EXPOSE 8090
