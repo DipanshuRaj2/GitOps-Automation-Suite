@@ -1,4 +1,4 @@
-# GitOps-Automation-Suite
+# 1GitOps-Automation-Suite
 
 ## Overview
 GitOps-Automation-Suite is a comprehensive suite designed to automate and manage your infrastructure and application deployment using GitOps principles. This repository leverages AWS, Docker, Ansible, and GitHub Actions to provide a streamlined and efficient workflow.
