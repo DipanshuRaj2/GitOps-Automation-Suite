@@ -1,81 +1,52 @@
-name: CI/CD Pipeline for Static Website
+name: CI/CD Pipeline - Static Website to EC2 via Docker
 
 on:
   push:
     branches:
       - main
-    paths:
-      - '.html'
-      - '.css'
-      - Dockerfile
-      - nginx.conf
 
 jobs:
-  build-and-deploy:
-    runs-on: self-hosted
+  deploy-to-ec2:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Clean system locks & update
-        run: |
-          sudo rm -f /var/lib/apt/lists/lock
-          sudo rm -f /var/lib/dpkg/lock*
-          sudo apt-get update -y
-          sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-
-      - name: Set Docker permissions
-        run: |
-          sudo chmod 666 /var/run/docker.sock
-          sudo usermod -aG docker $USER
-          sudo systemctl restart docker || true
-
+      # Checkout your code
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Set up Docker
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        with:
-          install: true
 
-      - name: Log in to Docker Hub
+      # Log in to DockerHub
+      - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Remove old container (if running)
-        run: |
-          docker rm -f my-static-website || true
-
-      - name: Build & push Docker image
-        uses: docker/build-push-action@v5
+      # Build and Push Docker image
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
 
-      - name: Pull latest image
+      # Decode and save SSH key for EC2
+      - name: Prepare SSH Key for EC2
         run: |
-          docker pull ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 --decode > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Run Docker container on port 8090
+      # SSH into EC2 and deploy container
+      - name: Deploy Docker Container to EC2
         run: |
-          docker run -d --name my-static-website -p 8090:8090 ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
-
-      - name: Post-deployment verification
-        run: |
-          echo "Deployed! Checking running containers..."
-          docker ps
-
-      - name: Clean up apt cache
-        run: |
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-
-      - name: Notify on failure
-        if: failure()
-        run: echo "Deployment failed. Check logs."
-
-      - name: Notify on success
-        if: success()
-        run: echo "✅ Static website successfully deployed on port 8090!"
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            docker rm -f my-static-website || true
+            docker pull ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
+            docker run -d -p 8090:80 --name my-static-website ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
+          EOF
