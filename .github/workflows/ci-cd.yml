@@ -1,32 +1,37 @@
-name: CI/CD Pipeline - Static Website to EC2 via Docker
+name: CI/CD Pipeline - Auto Deploy to EC2 via Docker
 
 on:
   push:
     branches:
       - main
+    paths:
+      - '**.html'
+      - '**.css'
+      - '**.js'
+      - 'Dockerfile'
 
 jobs:
-  deploy-to-ec2:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout your code
+      # 1. Checkout the repo
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up Docker
+      # 2. Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Log in to DockerHub
-      - name: Login to DockerHub
+      # 3. Log in to DockerHub
+      - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build and Push Docker image
-      - name: Build and Push Docker Image
+      # 4. Build & push Docker image
+      - name: Build and Push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -34,19 +39,18 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
 
-      # Decode and save SSH key for EC2
-      - name: Prepare SSH Key for EC2
+      # 5. Prepare EC2 SSH
+      - name: Prepare SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 --decode > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      # SSH into EC2 and deploy container
-      - name: Deploy Docker Container to EC2
+      # 6. SSH into EC2 and run container
+      - name: SSH & Deploy on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << EOF
-            docker rm -f my-static-website || true
-            docker pull ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
-            docker run -d -p 8090:80 --name my-static-website ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
-          EOF
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} "\
+            docker rm -f my-static-website || true && \
+            docker pull ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest && \
+            docker run -d -p 8090:80 --name my-static-website ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest"
