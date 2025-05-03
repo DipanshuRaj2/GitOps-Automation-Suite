@@ -1,5 +1,6 @@
+# Dockerfile
 FROM nginx:alpine
 COPY index.html /usr/share/nginx/html/
 COPY style.css /usr/share/nginx/html/
-EXPOSE 8080
-
+COPY app.js /usr/share/nginx/html/
+EXPOSE 9090:80
