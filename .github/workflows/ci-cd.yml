@@ -45,7 +45,7 @@ jobs:
       # SSH into EC2 and deploy container
       - name: Deploy Docker Container to EC2
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << EOF
             docker rm -f my-static-website || true
             docker pull ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
             docker run -d -p 8090:80 --name my-static-website ${{ secrets.DOCKER_USERNAME }}/my-static-website:latest
